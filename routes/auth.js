@@ -15,14 +15,18 @@ router.post("/auth", function (req, res) {
                     let uid = decodedToken.uid;
                     // got username lets do something
                     // console.log(decodedToken);
-                    let userExist = userSerivces.checkUserExist(uid);
+                    // userServices.deleteUser();
+                    userSerivces.checkUserExist(uid).then(function(userExist){
+                        if(userExist === true){
+                            console.log("user Exist");
+                        }else if(userExist === false){
+                            console.log("creating user");
+                            userSerivces.createUser(uid);
+                        }
+                    });
                    
-                    if(userExist){
-                        console.log("user Exist");
-                    }else{
-                        userSerivces.createUser(uid);
-                    }
-
+                    
+                    
                     res.send(decodedToken);
 
                 }).catch(function (error) {

@@ -1,6 +1,6 @@
 var express = require('express');
 const admin = require('firebase-admin');
-var dbPromise = require('./db-connection');
+var {connection: dbPromise} = require('./db-connection');
 
 let init = false;
 
@@ -47,7 +47,8 @@ let createUser = (uid) => {
         pictureURL: userRecord.photoURL,
         signInProvider: userRecord.providerData[0].providerId,
         role: "user",
-        interestedIn: []
+        interestedIn: [],
+        appreciatedArticles:[]
       };
       db.collection("users").insertOne(user);
       // console.log("should insert this", userRecord);
@@ -58,24 +59,30 @@ let createUser = (uid) => {
 };
 
 let checkUserExist = (uid) => {
-  dbPromise.then((db) => {
-    db.collection("users").findOne({ userId: uid }, { name: 1 }, function (err, result) {
-     console.log("users,js 63", result);
-      if (err) {
-        console.log(err);
-      } else {
-        if (result) {
-          console.log("hey you EXIST boy...");
-          return true;
-        } else {
-          return false;
+  let flag;
+  return new Promise(function(resolve, reject){
+    dbPromise.then((db) => {
+      db.collection("users").findOne({ userId: uid }, { name: 1 }, function(err, result){
+        if(result !== {} && result !== null && result !== undefined){
+          resolve(true);
+        }else{
+          resolve(false);
         }
-      }
+      });
+      
     });
-  })
+  });
+  
 
 };
 
+let deleteUser = ()=>{
+  dbPromise.then(function(db){
+    db.collection("users").deleteMany({name: "mohit kaushik"}, function(err, obj){
+
+    });
+  });
+};
 
 module.exports = {
   checkUserExist: checkUserExist,

@@ -47,4 +47,7 @@ let connection = new Promise((resolve, reject) => {
 
 });
 
-module.exports = connection;
+module.exports = {
+    connection:connection,
+    client: client
+};

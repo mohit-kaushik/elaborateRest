@@ -22,20 +22,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 // app.use(express.static(path.join(__dirname, 'public')));
 
-
-// app.use('/', indexRouter);
-// app.use('/users', usersRouter);
-
 app.use('/article', articleRouter);
 app.post('/auth', cors(), authRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
+  console.log("404");
   next(createError(404));
 });
 
 // error handler
 app.use(function(err, req, res, next) {
+  console.log("request not matched");
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
