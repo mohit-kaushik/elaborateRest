@@ -18,9 +18,9 @@ router.post("/appreciation", function (req, res, next) {
             // console.log(MongoClient);
             client.then(async (db) => {
 
-                if(initSession){
-                    console.log("starting session...");
-                     session = mongoClient.startSession();
+                if (initSession) {
+
+                    session = mongoClient.startSession();
                     initSession = false;
                 }
 
@@ -31,76 +31,50 @@ router.post("/appreciation", function (req, res, next) {
                 };
 
                 session.withTransaction(async () => {
-                    // db.collection("users").count().then((c) => { console.log(c) });
-                    db.collection("users").findOne({ userId: user.user_id }, {}).then(function (user) {
-                        let match = false;
-                        // console.log("user liked these", user.appreciatedArticles[0]);
-                        user.appreciatedArticles.map(function (articleId) {
-                            if (req.body.id === articleId) {
-                                match = true;
-                            }
+                    let article = await db.collection("articles").findOne({ _id: ObjectId(req.body.id) });
 
-                        });
-
-                        if (!match && req.body.appreciation) {
-
-                            db.collection("users").updateOne({ userId: user.userId }, {
-                                $push: {
-                                    appreciatedArticles: req.body.id
-                                }
-                            }, { session }, function (err, _doc) {
-                                if (err) throw err;
-                                console.log("user array done");
-
-                                db.collection("articles").findOneAndUpdate({ _id: ObjectId(req.body.id) }, {
-                                    $inc: { appreciations: 1 }
-                                }, { returnOriginal: false, session }, function (err, doc) {
-                                    if (err)
-                                        throw err;
-
-                                    // session.endSession();
-                                    console.log("inc done");
-                                    res.send({ appreciations: doc.value.appreciations, appreciated: true });
-                                });
-
-                            });
-
-
-
-
-
-
-                        } else if (match && !req.body.appreciation) {
-
-
-                            db.collection("users").findOneAndUpdate({ userId: user.userId }, {
-                                $pull: {
-                                    appreciatedArticles: req.body.id
-                                }
-                            }, session, function (err, _doc) {
-                                if (err)
-                                    throw err;
-
-                                console.log("user array done");
-
-                                // console.log("delete from liked ", match, " and ", req.body.appreciation);
-                                db.collection("articles").findOneAndUpdate({ _id: ObjectId(req.body.id) }, {
-                                    $inc: { appreciations: -1 }
-                                }, { returnOriginal: false, session }, function (err, doc) {
-                                    // console.log(doc.value.appreciations);
-                                    // session.endSession();
-                                    console.log("dec done");
-                                    if (!err)
-                                        res.send({ appreciations: doc.value.appreciations, appreciated: false });
-                                    else
-                                        throw err;
-
-                                });
-                            });
+                    let userExist = false;
+                    //can we use includes here ?
+                    article.appreciatedBy.map((u) => {
+                        if (u === user.user_id) {
+                            userExist = true;
                         }
                     });
 
+                    if (userExist && !req.body.appreciation) {
+                        console.log("matched decrement");
+                        //already liked .. so remove
+                        let article = await db.collection("articles").findOneAndUpdate({ _id: ObjectId(req.body.id) }, {
+                            $pull: {
+                                appreciatedBy: user.user_id
+                            }
+                        },{ returnOriginal: false })
 
+                        console.log(article.value);
+                        let match = article.value.appreciatedBy.includes(user.user_id)
+                        let likes = article.value.appreciatedBy.length;
+                        delete article.value.appreciatedBy;
+                        res.send({ ...article.value, appreciated: match, likes: likes });
+
+                    }
+
+                    else if (!userExist && req.body.appreciation) {
+                        console.log("matched increment")
+                        let article = await db.collection("articles").findOneAndUpdate({ _id: ObjectId(req.body.id) }, {
+                            $push: {
+                                appreciatedBy: user.user_id
+                            }
+                        }, { returnOriginal: false })
+                        console.log(article.value);
+                        let match = article.value.appreciatedBy.includes(user.user_id)
+                        let likes = article.value.appreciatedBy.length;
+                        delete article.value.appreciatedBy;
+                        res.send({ ...article.value, appreciated: match, likes: likes });
+
+                    }
+                    else {
+                        console.log("Nothing matched......!");
+                    }
 
                 }, transactionOptions).then(() => {
 
@@ -119,11 +93,11 @@ router.post("/appreciation", function (req, res, next) {
 
 router.post("/:article_id", (req, res, next) => {
     // res.send("something wrong");
-    console.log("article id not");
+
     try {
         let id = req.params.article_id;
 
-        console.log(req.query);
+
         client.then((db) => {
             db.collection("articles").findOne({ _id: ObjectId(id) }, {},
                 function (err, data) {
@@ -134,25 +108,15 @@ router.post("/:article_id", (req, res, next) => {
                         // console.log(user);
                         let match = false;
                         client.then((db) => {
-                            // db.collection("users").count().then((c) => { console.log(c) });
                             db.collection("users").findOne({ userId: user.user_id }, {})
                                 .then(function (user) {
-                                    // match = false;
+                                    match = data.appreciatedBy.includes(user.userId);
 
-                                    user.appreciatedArticles.map(function (articleId) {
-                                        // console.log(req.params.article_id);
-                                        // console.log(articleId);
-                                        if (req.params.article_id === articleId) {
-                                            // console.log("BINGOPOOOOOOOO");
-                                            // res.send(true);
-                                            match = true;
-                                        }
-
-                                    });
                                 })
                                 .then(function () {
-                                    console.log(data);
-                                    res.send({ ...data, appreciated: match });
+                                    let likes = data.appreciatedBy.length;
+                                    delete data.appreciatedBy;
+                                    res.send({ ...data, appreciated: match, likes: likes });
                                 });
                         });
                     });
@@ -180,7 +144,7 @@ router.get('/', function (req, res, next) {
                     anchor: 1,
                     channel: 1,
                     appreciations: 1,
-                    desc: 1 
+                    desc: 1
                 }
             }).toArray(function (err, result) {
 
