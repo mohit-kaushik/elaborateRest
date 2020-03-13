@@ -2,6 +2,7 @@ const { connection: client } = require("../services/db-connection");
 const { client: mongoClient } = require("../services/db-connection");
 var ObjectId = require('mongodb').ObjectId;
 var express = require('express');
+const requestIp = require('request-ip');
 var router = express.Router();
 var userSerivces = require('../services/users');
 const MongoClient = require('mongodb').MongoClient;
@@ -9,15 +10,18 @@ const MongoClient = require('mongodb').MongoClient;
 
 let initSession = true;
 let session;
-
-
+let ip = undefined;
+//try catch
 router.post("/appreciation", function (req, res, next) {
+    // const clientIp = requestIp.getClientIp(req);
+    // console.log(clientIp)
+    ip = req.ip;
     // res.send("something wrong");
     try {
         userSerivces.getUserFromToken(req.body.idToken).then(function (user) {
             // console.log(MongoClient);
             client.then(async (db) => {
-
+                console.log(initSession);
                 if (initSession) {
 
                     session = mongoClient.startSession();
@@ -50,7 +54,7 @@ router.post("/appreciation", function (req, res, next) {
                             }
                         },{ returnOriginal: false })
 
-                        console.log(article.value);
+                        // console.log(article.value);
                         let match = article.value.appreciatedBy.includes(user.user_id)
                         let likes = article.value.appreciatedBy.length;
                         delete article.value.appreciatedBy;
@@ -65,7 +69,7 @@ router.post("/appreciation", function (req, res, next) {
                                 appreciatedBy: user.user_id
                             }
                         }, { returnOriginal: false })
-                        console.log(article.value);
+                        // console.log(article.value);
                         let match = article.value.appreciatedBy.includes(user.user_id)
                         let likes = article.value.appreciatedBy.length;
                         delete article.value.appreciatedBy;
@@ -93,7 +97,10 @@ router.post("/appreciation", function (req, res, next) {
 
 router.post("/:article_id", (req, res, next) => {
     // res.send("something wrong");
-
+    const clientIp = requestIp.getClientIp(req);
+    console.log(clientIp)
+    console.log(req.ip)
+    
     try {
         let id = req.params.article_id;
 
@@ -132,6 +139,11 @@ router.post("/:article_id", (req, res, next) => {
 
 router.get('/', function (req, res, next) {
     // res.send("something wrong");
+    // const clientIp = requestIp.getClientIp(req);
+    // console.log(clientIp)
+    // console.log(req.ip)
+    console.log("reqest for articles");
+    
     try {
         client.then(function (db) {
             // db.collection("")
