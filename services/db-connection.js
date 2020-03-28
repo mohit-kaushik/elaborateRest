@@ -1,7 +1,9 @@
 const MongoClient = require('mongodb').MongoClient;
 const ObjectId = require('mongodb').ObjectId;
+var ErrorLog = require("./error-logging")
 
 const uri = "mongodb+srv://mohit:M1a4r9k1!@cluster0-j2jnt.mongodb.net/admin?retryWrites=true&w=majority";
+// const uri = "mongodb://localhost:27017"
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
 
@@ -11,43 +13,43 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 let connection = new Promise((resolve, reject) => {
     try {
         client.connect(err => {
-            console.log("making connection... ");
             if (err) {
                 console.log(err);
                 reject(err);
+                if (typeof err === "object")
+                    ErrorLog(JSON.stringify(err))
+
                 throw err
+
             }
             else {
-                console.log("connected");
                 try {
                     let dbConn = client.db("elaborate");
-                    
+
                     dbConn.stats(function (err, stats) {
-                        // console.log(stats);
-                        if(stats.collections <= 0){
-                            throw Error("no collection exist in the db name " + stats.db);  
+                        if (stats.collections <= 0) {
+                            throw Error("no collection exist in the db name " + stats.db);
                         }
-                        
+
                     });
                     resolve(dbConn);
                 } catch (err) {
-                    console.log(err);
-                    reject(err);
-                    // log in file instead of here
+                    if (typeof err === "object")
+                        ErrorLog(JSON.stringify(err))
 
+                    reject(err);
                 }
             }
-
-
-
         });
     } catch (err) {
-        console.log(err);
+        if (typeof err === "object")
+            ErrorLog(JSON.stringify(err))
+
     }
 
 });
 
 module.exports = {
-    connection:connection,
+    connection: connection,
     client: client
 };

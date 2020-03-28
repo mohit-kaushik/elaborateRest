@@ -1,53 +1,31 @@
 var express = require('express');
 var router = express.Router();
 var userSerivces = require('../services/users');
+var ErrorLog = require("../services/error-logging")
 
 userSerivces.adminInitApp();
 
-router.post("/auth", function (req, res) {
+router.post("/auth", async function (req, res) {
     try {
-        const idToken = req.body.token;
-
         if (req.body.op === "get user") {
-            
-            let user = userSerivces.getUserFromToken(idToken)
-                .then(function (decodedToken) {
-                    let uid = decodedToken.uid;
-                    // got username lets do something
-                    // console.log(decodedToken);
-                    // userServices.deleteUser();
-                    userSerivces.checkUserExist(uid).then(function(userExist){
-                        if(userExist === true){
-                            console.log("user Exist");
-                        }else if(userExist === false){
-                            console.log("creating user");
-                            userSerivces.createUser(uid);
-                        }
-                    });
-                   
-                    
-                    
-                    res.send(decodedToken);
+            const idToken = req.body.token;
+            let userExist = await userSerivces.checkUserExist(req.user.uid)
 
-                }).catch(function (error) {
-                    // Handle error
-                    console.log(error);
-                });
-            // userSerivces.getUserFromToken(token);
-            // return user;
+            if (userExist === false) {
+                userSerivces.createUser(uid);
+            }
+            res.send(req.user);
         }
-        // let userExist = userSerivces.checkUserExist();
 
-        // if (!userExist) {
-        //     let user = userSerivces.getUserFromToken(idToken);
-        //     userSerivces.createUser(user);
-        // }
+    }
 
-    } catch (err) {
+    catch (err) {
+        if (typeof err === "object")
+            ErrorLog(JSON.stringify(err))
+
         console.log(err);
     }
 
 });
-
 
 module.exports = router;
